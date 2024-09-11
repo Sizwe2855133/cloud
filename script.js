@@ -1,118 +1,106 @@
-const Splitting = window.Splitting;
-const { timeline, set } = window.gsap;
-
-const CLIP = new Audio(
-    'https://s3-us-west-2.amazonaws.com/s.cdpn.io/605876/t-shirt-cannon-pop.mp3'
-);
-
-Splitting();
-
-const SHIRT_SEGMENTS = [...document.querySelectorAll('.t-shirt')];
-const SHIRT = document.querySelector('.t-shirt__wrapper');
-const LEFT_ARM = SHIRT_SEGMENTS[1];
-const RIGHT_ARM = SHIRT_SEGMENTS[2];
-const FOLD = SHIRT_SEGMENTS[3].querySelector('.t-shirt__fold');
-const CLIPS = [...document.querySelectorAll('clipPath rect')];
-const BUTTON = document.querySelector('button');
-
-document.documentElement.style.setProperty('--hue', Math.random() * 360);
-
-set(FOLD, { transformOrigin: '50% 100%', scaleY: 0 });
-set(CLIPS, { transformOrigin: '50% 0' });
-set('.cannon__shirt', { opacity: 0 });
-set('.cannon', { y: 28 });
-set('.text--ordered .char', { y: '100%' });
-
-const SPEED = 0.15;
-
-const FOLD_TL = () =>
-    timeline()
-        .to(
-            LEFT_ARM,
-            {
-                duration: SPEED,
-                rotateY: -180,
-                transformOrigin: `${(22 / 65.3) * 100}% 50%`,
-            },
-            0
-        )
-        .to(
-            RIGHT_ARM,
-            {
-                duration: SPEED,
-                rotateY: -180,
-                transformOrigin: `${((65.3 - 22) / 65.3) * 100}% 50%`,
-            },
-            SPEED
-        )
-        .to(FOLD, { duration: SPEED / 4, scaleY: 1 }, SPEED * 2)
-        .to(FOLD, { duration: SPEED, y: -47 }, SPEED * 2 + 0.01)
-        .to(CLIPS, { duration: SPEED, scaleY: 0.2 }, SPEED * 2)
-        .to('.cannon', { duration: SPEED, y: 0 }, SPEED * 2);
-
-const LOAD_TL = () =>
-    timeline()
-        .to('.button__shirt', {
-            transformOrigin: '50% 13%',
-            rotate: 90,
-            duration: 0.15,
-        })
-        .to('.button__shirt', {
-            duration: 0.15,
-            y: 60,
-        })
-        .to('.t-shirt__cannon', {
-            y: 5,
-            repeat: 1,
-            yoyo: true,
-            duration: 0.1,
-        })
-        .to('.t-shirt__cannon', {
-            y: 50,
-            duration: 0.5,
-            delay: 0.1,
-        });
-
-const FIRE_TL = () =>
-    timeline()
-        .set('.t-shirt__cannon', {
-            rotate: 48,
-            x: -85,
-            scale: 2.5,
-        })
-        .set('.cannon__shirt', { opacity: 1 })
-        .to('.t-shirt__cannon-content', { duration: 1, y: -35 })
-        .to('.t-shirt__cannon-content', { duration: 0.25, y: -37.5 })
-        .to('.t-shirt__cannon-content', { duration: 0.015, y: -30.5 })
-        .to(
-            '.cannon__shirt',
-            { onStart: () => CLIP.play(), duration: 2.5, y: '-25vmax' },
-            // { onStart: () => CLIP.play(), duration: 0.5, y: '-25vmax' },
-            '<'
-        )
-        .to('.text--ordered .char', { duration: 0.15, stagger: 0.1, y: '0%' })
-        .to('button', { duration: 7 * 0.15, '--hue': 116, '--lightness': 55 }, '<');
-
-const ORDER_TL = new timeline({ paused: true });
-ORDER_TL.set('.cannon__shirt', { opacity: 0 });
-ORDER_TL.set('button', { '--hue': 260, '--lightness': 20 });
-ORDER_TL.to('button', { scale: 300 / BUTTON.offsetWidth, duration: SPEED });
-ORDER_TL.to('.text--order .char', { stagger: 0.1, y: '100%', duration: 0.1 });
-ORDER_TL.to(SHIRT, {
-    // Based on styling. 25px + 0.5rem
-    x: BUTTON.offsetWidth / 2 - 33,
-    duration: 0.2,
+window.addEventListener("DOMContentLoaded", () => {
+    const c = new Clock23(".clock");
 });
-ORDER_TL.add(FOLD_TL());
-ORDER_TL.add(LOAD_TL());
-ORDER_TL.add(FIRE_TL());
-BUTTON.addEventListener('click', () => {
-    if (ORDER_TL.progress() === 1) {
-        // ORDER_TL.restart()
-        document.documentElement.style.setProperty('--hue', Math.random() * 360);
-        ORDER_TL.time(0);
-        ORDER_TL.pause();
-    } else if (ORDER_TL.progress() === 0) {
-        ORDER_TL.play();
+
+class Clock23 {
+    fullClass = "full";
+
+    constructor(el) {
+        this.el = document.querySelector(el);
+
+        this.init();
     }
-});
+    init() {
+        this.timeUpdate();
+    }
+    get timeAsObject() {
+        const date = new Date();
+        const h = date.getHours();
+        const m = date.getMinutes();
+        const s = date.getSeconds();
+
+        return { h, m, s };
+    }
+    get timeAsString() {
+        const [h, m, s, ap] = this.timeDigitsGrouped;
+
+        return `${h}:${m}:${s} ${ap}`;
+    }
+    get timeDigitsGrouped() {
+        // this accessible string uses the 12-hour clock
+        let { h, m, s } = this.timeAsObject;
+        const ap = h > 11 ? "PM" : "AM";
+        // deal with midnight
+        if (h === 0) h += 12;
+        else if (h > 12) h -= 12;
+        // prepend 0 to the minute and second if single digits
+        if (m < 10) m = `0${m}`;
+        if (s < 10) s = `0${s}`;
+
+        return [h, m, s, ap];
+    }
+    checkFills(hands) {
+        for (let hand of hands) {
+            const unit = this.el?.querySelector(`[data-unit="${hand.name}"]`);
+
+            if (hand.fraction === 0)
+                unit?.classList.add(this.fullClass);
+        }
+    }
+    clearFills() {
+        const fills = Array.from(this.el?.querySelectorAll("[data-unit]"));
+
+        for (let fill of fills)
+            fill.classList.remove(this.fullClass);
+    }
+    timeUpdate() {
+        // update the accessible timestamp in the `aria-label`
+        this.el?.setAttribute("aria-label", this.timeAsString);
+        // move the hands
+        const time = this.timeAsObject;
+        const minFraction = time.s / 60;
+        const hrFraction = (time.m + minFraction) / 60;
+        const twelveHrFraction = (time.h % 12 + hrFraction) / 12;
+        const hands = [
+            { name: "h", fraction: twelveHrFraction, value: 376.99 },
+            { name: "m", fraction: hrFraction, value: 578.05 },
+            { name: "s", fraction: minFraction, value: 779.11 }
+        ];
+        const activeClass = "active";
+
+        for (let hand of hands) {
+            this.el?.style.setProperty(
+                `--${hand.name}Offset`,
+                Utils.decPlaces(hand.value * (1 - hand.fraction), 3)
+            );
+
+            const unit = this.el?.querySelector(`[data-unit="${hand.name}"]`);
+            const ticks = Array.from(unit?.querySelectorAll("[data-value]"));
+
+            for (let tick of ticks) {
+                const dataValue = +tick.getAttribute("data-value");
+                let timeValue = time[hand.name];
+
+                if (hand.name === "h")
+                    timeValue %= 12;
+
+                if (dataValue <= timeValue)
+                    tick.classList.add(activeClass);
+                else
+                    tick.removeAttribute("class");
+            }
+        }
+        this.checkFills(hands);
+
+        // loop
+        clearTimeout(this.clearFillsLoop);
+        this.clearFillsLoop = setTimeout(this.clearFills.bind(this), 600);
+        clearTimeout(this.timeUpdateLoop);
+        this.timeUpdateLoop = setTimeout(this.timeUpdate.bind(this), 1e3);
+    }
+}
+class Utils {
+    static decPlaces(n, d) {
+        return Math.round(n * 10 ** d) / 10 ** d;
+    }
+}
